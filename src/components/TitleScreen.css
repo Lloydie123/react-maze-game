@@ -1,0 +1,54 @@
+// TitleScreen.js
+import React from 'react';
+
+const TitleScreen = ({ onStartGame, onInstructions, onAboutUs }) => {
+  return (
+    <div style={styles.titleScreenContainer}>
+      <h1 style={styles.title}>Maze Game</h1>
+      <div style={styles.buttonContainer}>
+        <button style={styles.actionButton} onClick={onStartGame}>
+          Start Game
+        </button>
+      </div>
+      <div style={styles.buttonContainer}>
+        <button style={styles.actionButton} onClick={onInstructions}>
+          Instructions
+        </button>
+      </div>
+      <div style={styles.buttonContainer}>
+        <button style={styles.actionButton} onClick={onAboutUs}>
+          About Us
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const styles = {
+  titleScreenContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh', // Set to 100% of the viewport height for full-screen effect
+  },
+  title: {
+    fontSize: '2em',
+    marginBottom: '20px',
+  },
+  buttonContainer: {
+    margin: '10px 0',
+  },
+  actionButton: {
+    fontSize: '1.5em',
+    padding: '10px 20px',
+    cursor: 'pointer',
+    backgroundColor: '#4caf50', // Green background color
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    transition: 'background-color 0.3s ease',
+  },
+};
+
+export default TitleScreen;
