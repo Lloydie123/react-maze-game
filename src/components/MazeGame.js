@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,  useCallback } from 'react';
 import './App.css';
 // Create a meta element
 const viewportMeta = document.createElement('meta');
@@ -139,88 +139,62 @@ const levels = [
     ]
   }, // Level 3 (example walls)
 ];
-const styles = {
-  mazeRow: {
-    display: 'flex',
-  },
-  mazeCell: {
-    flex: 1,
-
-  },
-
-  // New style for smaller maze cells
-  smallerMazeCell: {
-    flex: 1,
-    maxWidth: '15px',
-    maxHeight: '20px',
-    display: 'inline-block',
-  },
-  pageContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-  },
-
-  GameOverContainer: {
-    margin: 'auto',
-    width: '50%',
-    padding: '10px',
-    alignItems:'center',
-    color: 'white',
-  },
-  aboutUsContainer: {
-    textAlign: 'center',
-    padding: '20px',
-  },
-  title: {
-    fontSize: '2em',
-    marginBottom: '20px',
-    
-    color: 'white',
-  },
-  instructionText: {
-    fontSize: '1.2em',
-    marginBottom: '20px',
-    color: 'white',
-  },
-  backButton: {
-    fontSize: '1em',
-    padding: '10px 20px',
-    cursor: 'pointer',
-    backgroundColor: '#4caf50',
-    color: 'white',
-    border: 'none',
-    marginTop: '50px',
-    borderRadius: '5px',
-    transition: 'background-color 0.3s ease',
-    font: 'Chiller',
-  },
-
-
-
-};
-
 const Maze = ({ onLevelChange }) => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [goal, setGoal] = useState({ x: 0, y: 0 });
   const [isGameWon, setIsGameWon] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [currentLevel, setCurrentLevel] = useState(0);
-  const [isGameOver, setIsGameOver] = useState(false);
+  const [currentLevel] = useState(0);
+
+  const isWall = useCallback((x, y) => {
+    return (
+      levels[currentLevel].walls &&
+      levels[currentLevel].walls.some(([wallX, wallY]) => wallX === x && wallY === y)
+    );
+  }, [currentLevel]);
+
+  const movePlayer = useCallback((dx, dy) => {
+    setPosition((prevPosition) => {
+      const newPosition = { x: prevPosition.x + dx, y: prevPosition.y + dy };
+
+      if (
+        newPosition.x >= 0 &&
+        newPosition.x < levels[currentLevel].cols &&
+        newPosition.y >= 0 &&
+        newPosition.y < levels[currentLevel].rows &&
+        !isWall(newPosition.x, newPosition.y)
+      ) {
+        if (newPosition.x === goal.x && newPosition.y === goal.y) {
+          setIsGameWon(true);
+
+          if (currentLevel < levels.length - 1) {
+            const nextLevel = currentLevel + 1;
+            setGoal({ x: levels[nextLevel].cols - 1, y: levels[nextLevel].rows - 1 });
+            setPosition({ x: 0, y: 0 });
+            setIsGameWon(false);
+            onLevelChange(nextLevel);
+
+            alert(`Congratulations! You completed Level ${nextLevel}`);
+            return { x: 0, y: 0 };
+          } else {
+            alert('Congratulations! You completed all levels!');
+          }
+        }
+        return newPosition;
+      }
+
+      return prevPosition;
+    });
+  }, [currentLevel, goal.x, goal.y, onLevelChange, isWall]);
 
   useEffect(() => {
- 
-    // Check if the device is a mobile device
     const isMobileDevice = /Mobi|Android/i.test(navigator.userAgent);
     setIsMobile(isMobileDevice);
 
-    // Set initial goal position
     setGoal({ x: levels[currentLevel].cols - 1, y: levels[currentLevel].rows - 1 });
-    // eslint-disable-next-line
+
     const handleKeyDown = (e) => {
-      if (isGameWon || isMobile) return; // Game is won or mobile device, no need to handle key events
+      if (isGameWon || isMobile) return;
 
       switch (e.key) {
         case 'ArrowUp':
@@ -241,63 +215,11 @@ const Maze = ({ onLevelChange }) => {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    movePlayer(); // Include movePlayer here
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-
-
-    
-  }, [position, goal, isGameWon, isMobile, currentLevel, movePlayer]);
-
-  const movePlayer = (dx, dy) => {
-    const newPosition = { x: position.x + dx, y: position.y + dy };
-  
-    if (
-      newPosition.x >= 0 &&
-      newPosition.x < levels[currentLevel].cols &&
-      newPosition.y >= 0 &&
-      newPosition.y < levels[currentLevel].rows &&
-      !isWall(newPosition.x, newPosition.y)
-    ) {
-      setPosition(newPosition);
-
-      if (newPosition.x === goal.x && newPosition.y === goal.y) {
-        setIsGameWon(true);
-
-        if (currentLevel < levels.length - 1) {
-          setCurrentLevel((prevLevel) => {
-            const nextLevel = prevLevel + 1;
-            setGoal({ x: levels[nextLevel].cols - 1, y: levels[nextLevel].rows - 1 });
-            setPosition({ x: 0, y: 0 });
-            setIsGameWon(false);
-            onLevelChange(nextLevel);
-          
-            if (nextLevel < levels.length) {
-             
-              return nextLevel;
-            } else {
-              alert('Congratulations! You completed all levels!');
-              return prevLevel;
-            }
-          });
-          
-        } else {
-          alert('Congratulations! You completed all levels!');
-          setIsGameOver(true);
-          // Hide the maze screen, just display a game over screen
-          // Redirect to a game over screen 
-        }
-      }
-    }
-  };
-
-  const isWall = (x, y) => {
-    return (
-      levels[currentLevel].walls &&
-      levels[currentLevel].walls.some(([wallX, wallY]) => wallX === x && wallY === y)
-    );
-  };
+  }, [movePlayer, isGameWon, isMobile, currentLevel]);
 
   const handleButtonClick = (direction) => {
     if (isGameWon) return;
@@ -321,22 +243,9 @@ const Maze = ({ onLevelChange }) => {
   };
 
   const renderMaze = () => {
-    if (isGameOver) {
-      return <div style={styles.GameOverContainer}>
-        <center>
-        <h2 style={styles.title}>Game Over!</h2>
-        <p> Congratulations! The relentless zombie has triumphed in its insatiable quest to reach its victim. With cunning and determination, it navigated through the maze, overcoming obstacles and devouring challenges. The taste of victory is sweet, and the zombie's plan to feast on its victim has been successfully realized. </p>
-        <button style={styles.backButton}  onClick={() => window.location.reload()}>Return to Title</button>
-        </center>
-        </div>;
-
-
-      
-    }
     const mazeRows = Array.from({ length: levels[currentLevel].rows }, (_, rowIndex) => (
       <div className="maze-row" key={rowIndex}>
         {Array.from({ length: levels[currentLevel].cols }, (_, colIndex) => {
-          const cellStyle = currentLevel === 2 ? styles.smallerMazeCell : styles.mazeCell;
           const cellClass = isWall(colIndex, rowIndex)
             ? 'wall'
             : position.x === colIndex && position.y === rowIndex
@@ -344,14 +253,14 @@ const Maze = ({ onLevelChange }) => {
             : goal.x === colIndex && goal.y === rowIndex
             ? 'goal'
             : '';
-  
+
           return (
-            <div key={colIndex} className={`maze-cell ${cellClass}`} style={cellStyle}></div>
+            <div key={colIndex} className={`maze-cell ${cellClass}`}></div>
           );
         })}
       </div>
     ));
-  
+
     return mazeRows;
   };
 
@@ -359,10 +268,8 @@ const Maze = ({ onLevelChange }) => {
     if (isMobile) {
       return (
         <div className="mobile-controls">
-          <div className="control-row">
-            <button onClick={() => handleButtonClick('up')}>↑</button>
-          </div>
-          <div className="control-row">
+          <button onClick={() => handleButtonClick('up')}>↑</button>
+          <div>
             <button onClick={() => handleButtonClick('left')}>←</button>
             <button onClick={() => handleButtonClick('down')}>↓</button>
             <button onClick={() => handleButtonClick('right')}>→</button>
@@ -370,40 +277,33 @@ const Maze = ({ onLevelChange }) => {
         </div>
       );
     }
-  
+
     return null;
   };
-  
+
   return (
     <div className="maze-container">
       <div className="maze">{renderMaze()}</div>
-
       {renderControls()}
     </div>
   );
 };
+
 function App() {
   const [isGameCompleted, setIsGameCompleted] = useState(false);
-  const [currentLevel, setCurrentLevel] = useState(1);
-  const [isGameOver, setIsGameOver] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState(1); // Initialize current level to 1
 
   const handleLevelChange = (newLevel) => {
     if (newLevel <= levels.length) {
-      setCurrentLevel(newLevel + 1);
+      setCurrentLevel(newLevel + 1); // Increment the current level
     } else {
       setIsGameCompleted(true);
-      setIsGameOver(true);
     }
   };
 
   const handleRestartGame = () => {
     setCurrentLevel(1);
     setIsGameCompleted(false);
-    setIsGameOver(false);
-  };
-
-  const handleGameOver = () => {
-    setIsGameOver(true);
   };
 
   return (
@@ -415,17 +315,11 @@ function App() {
             <p>You completed all levels!</p>
             <button onClick={handleRestartGame}>Restart Game</button>
           </div>
-        ) : isGameOver ? (
-          <div>
-            <h1>Game Over</h1>
-            <p>You reached the end of the game.</p>
-            <button onClick={handleRestartGame}>Restart Game</button>
-          </div>
         ) : (
           <>
-            <center><h1> Zombie Maze Game - Level {currentLevel}</h1></center>
+            <center><h1>Maze Game - Level {currentLevel}</h1></center>
             {currentLevel <= levels.length ? (
-              <Maze onLevelChange={handleLevelChange} onGameOver={handleGameOver} />
+              <Maze onLevelChange={handleLevelChange} />
             ) : (
               <div>
                 <h1>Congratulations!</h1>
@@ -439,7 +333,5 @@ function App() {
     </div>
   );
 }
-
-
 
 export default App;
